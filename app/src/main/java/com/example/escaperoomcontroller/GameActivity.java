@@ -25,9 +25,9 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
     private int serverPort;
 
     final float NS2S = 1.0f / 1000000000.0f;
-    float[] acceleration = null;
-    float[] velocity = null;
-    float[] position = null;
+    private Vector3D acceleration;
+    private Vector3D velocity;
+    private Vector3D position;
     long acceleratorLastTimestamp = 0;
     int countOfZeroAccelerations = 0;
 
@@ -49,11 +49,9 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
     }
 
     private void initializeSensorValues() {
-        acceleration = new float[3];
-        velocity = new float[3];
-        position = new float[3];
-        velocity[0] = velocity[1] = velocity[2] = 0f;
-        position[0] = position[1] = position[2] = 0f;
+        acceleration = new Vector3D();
+        velocity = new Vector3D();
+        position = new Vector3D();
         acceleratorLastTimestamp = 0;
         countOfZeroAccelerations = 0;
     }
@@ -88,37 +86,34 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
             calculateVelocityAndPosition(sensorEvent);
         }
 
-        float[] values = sensorEvent.values;
-        final String msg = String.format("%f %f %f %d\n", values[0], values[1], values[2], sensorEvent.timestamp);
+        final String msg = String.format("%s %d\n", position, sensorEvent.timestamp);
         textView.setText(msg);
         sendMessage(msg);
     }
 
     private void calculateVelocityAndPosition(SensorEvent sensorEvent) {
-        double accelerationValue = 0;
-        for (int index = 0; index < 3; index++) {
-            if (Math.abs(sensorEvent.values[index]) < 0.2) {
-                sensorEvent.values[index] = 0;
+        float[] values = sensorEvent.values;
+        for (int i = 0; i < 3; i++) {
+            if (Math.abs(values[i]) < 0.2) {
+                values[i] = 0;
             }
-            accelerationValue += Math.pow(sensorEvent.values[index], 2);
         }
-        accelerationValue = Math.sqrt(accelerationValue);
-        if (accelerationValue == 0) {
+
+        Vector3D newAcceleration = new Vector3D(values);
+        if (newAcceleration.isZero()) {
             countOfZeroAccelerations++;
-            if (countOfZeroAccelerations >= 25) {
-                return; // TODO : fix this
+            if (countOfZeroAccelerations > 25) {
+                velocity.setZero();
             }
+        } else {
+            countOfZeroAccelerations = 0;
         }
 
         float dt = (sensorEvent.timestamp - acceleratorLastTimestamp) * NS2S;
+        velocity.add(acceleration.getSum(newAcceleration).getMultipliedBy(dt / 2));
+        position.add(velocity.getMultipliedBy(dt));
 
-
-        for (int index = 0; index < 3; index++) {
-            velocity[index] += (sensorEvent.values[index] + acceleration[index]) / 2 * dt;
-            position[index] += velocity[index] * dt;
-        }
-
-        System.arraycopy(sensorEvent.values, 0, acceleration, 0, 3);
+        acceleration.setZero().add(newAcceleration);
         acceleratorLastTimestamp = sensorEvent.timestamp;
     }
 
