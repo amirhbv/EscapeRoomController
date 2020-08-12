@@ -43,6 +43,14 @@ public class Vector3D {
         return this;
     }
 
+    Vector3D multiply(final float scalar) {
+        this.x *= scalar;
+        this.y *= scalar;
+        this.z *= scalar;
+
+        return this;
+    }
+
     Vector3D setZero() {
         this.x = 0;
         this.y = 0;

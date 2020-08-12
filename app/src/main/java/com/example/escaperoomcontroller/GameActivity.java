@@ -28,8 +28,10 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
     private Vector3D acceleration;
     private Vector3D velocity;
     private Vector3D position;
+    private Vector3D tempAcceleration;
     long acceleratorLastTimestamp = 0;
     int countOfZeroAccelerations = 0;
+    int positionChangeCounter = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,8 +54,7 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
         acceleration = new Vector3D();
         velocity = new Vector3D();
         position = new Vector3D();
-        acceleratorLastTimestamp = 0;
-        countOfZeroAccelerations = 0;
+        tempAcceleration = new Vector3D();
     }
 
     @Override
@@ -86,7 +87,7 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
             calculateVelocityAndPosition(sensorEvent);
         }
 
-        final String msg = String.format("%s %d\n", position, sensorEvent.timestamp);
+        final String msg = String.format("\n%s\n%s\n%s\n %d\n", position, velocity, acceleration, sensorEvent.timestamp);
         textView.setText(msg);
         sendMessage(msg);
     }
@@ -94,27 +95,34 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
     private void calculateVelocityAndPosition(SensorEvent sensorEvent) {
         float[] values = sensorEvent.values;
         for (int i = 0; i < 3; i++) {
-            if (Math.abs(values[i]) < 0.2) {
+            if ((Math.abs(values[i]) < 0.4 && i < 2) || (Math.abs(values[i]) < 0.7 && i == 2)) {
                 values[i] = 0;
             }
         }
 
         Vector3D newAcceleration = new Vector3D(values);
-        if (newAcceleration.isZero()) {
-            countOfZeroAccelerations++;
-            if (countOfZeroAccelerations > 25) {
-                velocity.setZero();
-            }
-        } else {
-            countOfZeroAccelerations = 0;
+        if (positionChangeCounter < 10) {
+            tempAcceleration.add(newAcceleration);
         }
+        else {
+            if (tempAcceleration.isZero()) {
+                countOfZeroAccelerations++;
+                if (countOfZeroAccelerations > 25) {
+                    velocity.setZero();
+                }
+            } else {
+                countOfZeroAccelerations = 0;
+            }
+            tempAcceleration.multiply(1f / positionChangeCounter);
+            float dt = (sensorEvent.timestamp - acceleratorLastTimestamp) * NS2S;
+            velocity.add(acceleration.getSum(tempAcceleration).getMultipliedBy(dt / 2));
+            position.add(velocity.getMultipliedBy(dt));
 
-        float dt = (sensorEvent.timestamp - acceleratorLastTimestamp) * NS2S;
-        velocity.add(acceleration.getSum(newAcceleration).getMultipliedBy(dt / 2));
-        position.add(velocity.getMultipliedBy(dt));
-
-        acceleration.setZero().add(newAcceleration);
-        acceleratorLastTimestamp = sensorEvent.timestamp;
+            acceleration.setZero().add(tempAcceleration);
+            acceleratorLastTimestamp = sensorEvent.timestamp;
+            tempAcceleration.setZero();
+            positionChangeCounter = 0;
+        }
     }
 
     private void sendMessage(final String message) {
