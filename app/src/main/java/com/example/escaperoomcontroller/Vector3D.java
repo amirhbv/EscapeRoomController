@@ -1,0 +1,89 @@
+package com.example.escaperoomcontroller;
+
+public class Vector3D {
+    private float x, y, z;
+
+    Vector3D() {
+        this.setZero();
+    }
+
+    Vector3D(float x, float y, float z) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+    }
+
+    Vector3D(Vector3D vector3D) {
+        this.x = vector3D.x;
+        this.y = vector3D.y;
+        this.z = vector3D.z;
+    }
+
+    Vector3D(double x, double y, double z) {
+        this.x = (float) x;
+        this.y = (float) y;
+        this.z = (float) z;
+    }
+
+    void add(Vector3D v) {
+        this.x += v.x;
+        this.y += v.y;
+        this.z += v.z;
+    }
+
+    void setZero() {
+        this.x = 0;
+        this.y = 0;
+        this.z = 0;
+    }
+
+    float getX() {
+        return x;
+    }
+
+    float getY() {
+        return y;
+    }
+
+    float getZ() { return z; }
+
+    float getDistance(Vector3D other) {
+        float dx = this.x - other.x;
+        float dy = this.y - other.y;
+        float dz = this.z - other.z;
+        return (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    float getLength() {
+        return (float) Math.sqrt(x * x + y * y + z * z);
+    }
+
+    Vector3D getUnit() {
+        float len = getLength();
+        if (len == 0) {
+            return new Vector3D(0, 0, 0);
+        }
+        return new Vector3D(x / len, y / len, z / len);
+    }
+
+    Vector3D getMultipliedBy(float scalar) {
+        return new Vector3D(x * scalar, y * scalar, z * scalar);
+    }
+
+    Vector3D getSum(Vector3D other) {
+        return new Vector3D(x + other.x, y + other.y, z + other.z);
+    }
+
+    float dotProduct(Vector3D other) {
+        return this.x * other.x + this.y * other.y + this.z + other.z;
+    }
+
+    boolean isZero() {
+        return this.x == 0 && this.y == 0 && this.z == 0;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("(%s, %s, %s)", this.x, this.y, this.z);
+    }
+}
