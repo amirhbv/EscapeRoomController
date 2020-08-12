@@ -59,6 +59,18 @@ public class Vector3D {
         return this;
     }
 
+    void setX(float x) {
+        this.x = x;
+    }
+
+    void setY(float y) {
+        this.y = y;
+    }
+
+    void setZ(float z) {
+        this.z = z;
+    }
+
     float getX() {
         return x;
     }

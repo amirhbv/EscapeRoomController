@@ -9,10 +9,17 @@
 
     <TextView
             android:text="TextView"
-            android:layout_width="228dp"
-            android:layout_height="128dp" android:id="@+id/textView"
+            android:layout_width="331dp"
+            android:layout_height="201dp" android:id="@+id/textView"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintHorizontal_bias="0.5" app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" app:layout_constraintBottom_toBottomOf="parent"/>
+    <Button
+            android:text="@string/calibrate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:id="@+id/button" tools:layout_editor_absoluteY="466dp"
+            tools:layout_editor_absoluteX="157dp"
+            android:onClick="calibrate"
+            />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
