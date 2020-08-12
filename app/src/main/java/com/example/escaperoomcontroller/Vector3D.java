@@ -14,6 +14,11 @@ public class Vector3D {
     }
 
     Vector3D(final float[] values) {
+        if (values == null) {
+            this.setZero();
+            return;
+        }
+
         if (values.length != 3) {
             throw new Error("Values length must be 3.");
         }

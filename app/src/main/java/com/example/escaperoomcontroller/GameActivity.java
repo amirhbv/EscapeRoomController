@@ -26,20 +26,29 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
     private int serverPort;
 
     final float NS2S = 1.0f / 1000000000.0f;
-    private boolean isCalibrating = false;
-    long calibrateStartTimestamp = 0;
-    long calibrateCounter = 0;
+    final float CALIBRATION_DURATION = 10;
+
     private boolean isStarted = false;
+    private boolean isCalibrating = false;
+
+    private long accelerationCalibrateStartTimestamp = 0;
+    private long accelerationCalibrateCounter = 0;
+    private long gameRotationCalibrateStartTimestamp = 0;
+    private long gameRotationCalibrateCounter = 0;
+
     private Vector3D accelerationBias;
     private Vector3D accelerationBiasMin;
     private Vector3D accelerationBiasMax;
     private Vector3D acceleration;
     private Vector3D velocity;
     private Vector3D position;
-    private Vector3D tempAcceleration;
-    long acceleratorLastTimestamp = 0;
-    int countOfZeroAccelerations = 0;
-    int positionChangeCounter = 0;
+    private long acceleratorLastTimestamp = 0;
+
+    private long gameRotationLastTimestamp = 0;
+    private float[] calibrationRotationMatrix;
+    private float[] lastRotationMatrix;
+    private Vector3D currentRotationAngle;
+    private Vector3D lastRotationAngle;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,18 +71,27 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
         acceleration = new Vector3D();
         velocity = new Vector3D();
         position = new Vector3D();
-        tempAcceleration = new Vector3D();
         accelerationBias = new Vector3D();
         accelerationBiasMin = new Vector3D();
         accelerationBiasMax = new Vector3D();
+
+        lastRotationMatrix = new float[9];
+        calibrationRotationMatrix = new float[9];
+        for (int i = 0; i < calibrationRotationMatrix.length; i++) {
+            calibrationRotationMatrix[i] = 0;
+        }
+        currentRotationAngle = new Vector3D();
+        lastRotationAngle = new Vector3D();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        sensorManager.registerListener(this,
-//                sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY),
-                sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION),
+
+        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION),
+                SensorManager.SENSOR_DELAY_GAME);
+
+        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR),
                 SensorManager.SENSOR_DELAY_GAME);
     }
 
@@ -90,59 +108,123 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
             return;
         }
 
-        if (sensorEvent.sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION) {
-            if (isCalibrating) {
-                if (calibrateStartTimestamp == 0) {
-                    calibrateStartTimestamp = sensorEvent.timestamp;
-                    return;
+        switch (sensorEvent.sensor.getType()) {
+            case Sensor.TYPE_LINEAR_ACCELERATION:
+                handleAccelerationSensorEvent(sensorEvent);
+                break;
+            case Sensor.TYPE_GAME_ROTATION_VECTOR:
+                handleGameRotationSensorEvent(sensorEvent);
+                break;
+        }
+
+        if (isStarted) {
+            final String msg = String.format("%s\n%s\n%s", acceleration, currentRotationAngle, lastRotationAngle);
+            textView.setText(msg);
+            sendMessage(msg);
+        }
+    }
+
+    private void handleAccelerationSensorEvent(SensorEvent sensorEvent) {
+        if (isCalibrating) {
+            if (accelerationCalibrateStartTimestamp == 0) {
+                accelerationCalibrateStartTimestamp = sensorEvent.timestamp;
+                return;
+            }
+
+            float[] values = sensorEvent.values;
+            if (values[0] > accelerationBiasMax.getX()) {
+                accelerationBiasMax.setX(values[0]);
+            }
+            if (values[1] > accelerationBiasMax.getY()) {
+                accelerationBiasMax.setY(values[1]);
+            }
+            if (values[2] > accelerationBiasMax.getZ()) {
+                accelerationBiasMax.setZ(values[2]);
+            }
+
+            if (values[0] < accelerationBiasMin.getX()) {
+                accelerationBiasMin.setX(values[0]);
+            }
+            if (values[1] < accelerationBiasMin.getY()) {
+                accelerationBiasMin.setY(values[1]);
+            }
+            if (values[2] < accelerationBiasMin.getZ()) {
+                accelerationBiasMin.setZ(values[2]);
+            }
+
+            accelerationBias.add(new Vector3D(sensorEvent.values));
+            accelerationCalibrateCounter++;
+            if ((sensorEvent.timestamp - accelerationCalibrateStartTimestamp) * NS2S > CALIBRATION_DURATION) {
+                accelerationBias.multiply(-1f / accelerationCalibrateCounter);
+                isCalibrating = false;
+                isStarted = true;
+            }
+        } else if (isStarted) {
+            if (acceleratorLastTimestamp == 0) {
+                acceleratorLastTimestamp = sensorEvent.timestamp;
+                return;
+            }
+
+            UpdateAcceleration(sensorEvent);
+        }
+    }
+
+    private void handleGameRotationSensorEvent(SensorEvent sensorEvent) {
+        float[] values = sensorEvent.values;
+        if (isCalibrating) {
+            if (gameRotationCalibrateStartTimestamp == 0) {
+                gameRotationCalibrateStartTimestamp = sensorEvent.timestamp;
+                return;
+            }
+
+            float[] rotationMatrix = new float[9];
+            SensorManager.getRotationMatrixFromVector(rotationMatrix, values);
+            for (int i = 0; i < rotationMatrix.length; i++) {
+                calibrationRotationMatrix[i] += rotationMatrix[i];
+            }
+
+            gameRotationCalibrateCounter++;
+            if ((sensorEvent.timestamp - gameRotationCalibrateStartTimestamp) * NS2S > CALIBRATION_DURATION) {
+                for (int i = 0; i < rotationMatrix.length; i++) {
+                    calibrationRotationMatrix[i] /= gameRotationCalibrateCounter;
                 }
 
-                float[] values = sensorEvent.values;
-                if (values[0] > accelerationBiasMax.getX()) {
-                    accelerationBiasMax.setX(values[0]);
-                }
-                if (values[1] > accelerationBiasMax.getY()) {
-                    accelerationBiasMax.setY(values[1]);
-                }
-                if (values[2] > accelerationBiasMax.getZ()) {
-                    accelerationBiasMax.setZ(values[2]);
-                }
+                isCalibrating = false;
+                isStarted = true;
+            }
+        } else if (isStarted) {
+            if (gameRotationLastTimestamp == 0) {
+                gameRotationLastTimestamp = sensorEvent.timestamp;
+                SensorManager.getRotationMatrixFromVector(lastRotationMatrix, values);
+                return;
+            }
 
-                if (values[0] < accelerationBiasMin.getX()) {
-                    accelerationBiasMin.setX(values[0]);
-                }
-                if (values[1] < accelerationBiasMin.getY()) {
-                    accelerationBiasMin.setY(values[1]);
-                }
-                if (values[2] < accelerationBiasMin.getZ()) {
-                    accelerationBiasMin.setZ(values[2]);
-                }
+            if ((sensorEvent.timestamp - gameRotationLastTimestamp) * NS2S > 1) {
 
-                accelerationBias.add(new Vector3D(sensorEvent.values));
-                calibrateCounter++;
-                if ((sensorEvent.timestamp - calibrateStartTimestamp) * NS2S > 10) {
-                    accelerationBias.multiply(-1f / calibrateCounter);
-                    isCalibrating = false;
-                    isStarted = true;
-                }
-            } else if (isStarted) {
-                if (acceleratorLastTimestamp == 0) {
-                    acceleratorLastTimestamp = sensorEvent.timestamp;
-                    return;
-                }
+                float[] rotationMatrix = new float[9];
+                SensorManager.getRotationMatrixFromVector(rotationMatrix, values);
 
-                boolean isChanged = calculateVelocityAndPosition(sensorEvent);
-                if (isChanged) {
-//                    final String msg = String.format("\n%s\n%s\n%s\n%s\n %d\n", position, velocity, acceleration, accelerationBias, sensorEvent.timestamp);
-                    final String msg = String.format("%s", velocity);
-                    textView.setText(msg);
-                    sendMessage(msg);
+                float[] angleChange = new float[3];
+                // ANGLE CHANGE : (z, x, y)
+                SensorManager.getAngleChange(angleChange, rotationMatrix, calibrationRotationMatrix);
+                for (int i = 0; i < angleChange.length; i++) {
+                    angleChange[i] *= 57;
                 }
+                currentRotationAngle = new Vector3D(angleChange);
+
+                SensorManager.getAngleChange(angleChange, rotationMatrix, lastRotationMatrix);
+                for (int i = 0; i < angleChange.length; i++) {
+                    angleChange[i] *= 57;
+                }
+                lastRotationAngle = new Vector3D(angleChange);
+
+                lastRotationMatrix = rotationMatrix;
+                gameRotationLastTimestamp = sensorEvent.timestamp;
             }
         }
     }
 
-    private boolean calculateVelocityAndPosition(SensorEvent sensorEvent) {
+    private void UpdateAcceleration(SensorEvent sensorEvent) {
         float[] values = sensorEvent.values;
 
         if (values[0] < accelerationBiasMax.getX() && values[0] > accelerationBiasMin.getX()) {
@@ -157,49 +239,18 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
 
         Vector3D newAcceleration = new Vector3D(values);
 
-//        Vector3D newAcceleration = new Vector3D(values).add(accelerationBias);
-//
-//        if (Math.abs(newAcceleration.getX()) < 0.1) {
-//            newAcceleration.setX(0f);
-//        }
-//        if (Math.abs(newAcceleration.getY()) < 0.1) {
-//            newAcceleration.setY(0f);
-//        }
-//        if (Math.abs(newAcceleration.getZ()) < 0.1) {
-//            newAcceleration.setZ(0f);
-//        }
-
-        tempAcceleration.add(newAcceleration);
-        positionChangeCounter++;
-        if (positionChangeCounter >= 1) {
-            if (tempAcceleration.isZero()) {
-                countOfZeroAccelerations++;
-//                if (countOfZeroAccelerations > 25) {
-//                    velocity.setZero();
-//                }
-            } else {
-                countOfZeroAccelerations = 0;
-            }
-
-            tempAcceleration.multiply(1f / positionChangeCounter);
-            float dt = (sensorEvent.timestamp - acceleratorLastTimestamp) * NS2S;
-//            velocity.add(acceleration.getSum(tempAcceleration).getMultipliedBy(dt / 2));
-            velocity.add(tempAcceleration.getMultipliedBy(dt));
-            if (velocity.getLength() > .1) {
-                position.add(velocity.getMultipliedBy(dt));
-            }
-            velocity.multiply(0.9f);
-            if (velocity.getLength() < 0.001) {
-                velocity.setZero();
-            }
-
-            acceleration.setZero().add(tempAcceleration);
-            acceleratorLastTimestamp = sensorEvent.timestamp;
-            tempAcceleration.setZero();
-            positionChangeCounter = 0;
-            return true;
+        float dt = (sensorEvent.timestamp - acceleratorLastTimestamp) * NS2S;
+        velocity.add(newAcceleration.getMultipliedBy(dt));
+        if (velocity.getLength() > .1) {
+            position.add(velocity.getMultipliedBy(dt));
         }
-        return false;
+        velocity.multiply(0.9f);
+        if (velocity.getLength() < 0.001) {
+            velocity.setZero();
+        }
+
+        acceleration.setZero().add(newAcceleration);
+        acceleratorLastTimestamp = sensorEvent.timestamp;
     }
 
     private void sendMessage(final String message) {
@@ -212,15 +263,17 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
             public void run() {
                 final Random rand = new Random();
                 try (DatagramSocket datagramSocket = new DatagramSocket()) {
-                    // IP Address below is the IP address of that Device where server socket is opened.
+                    // IP Address below is the IP address of that Device where server socket is
+                    // opened.
                     final InetAddress serverAddr = InetAddress.getByName(serverIp);
-                    final DatagramPacket datagramPacket = new DatagramPacket(message.getBytes(), message.length(), serverAddr, serverPort);
+                    final DatagramPacket datagramPacket = new DatagramPacket(message.getBytes(), message.length(),
+                            serverAddr, serverPort);
                     datagramSocket.send(datagramPacket);
 
-//                    byte[] lMsg = new byte[1000];
-//                    final DatagramPacket resp = new DatagramPacket(lMsg, lMsg.length);
-//                    datagramSocket.receive(resp);
-//                    stringData = new String(lMsg, 0, resp.getLength());
+                    // byte[] lMsg = new byte[1000];
+                    // final DatagramPacket resp = new DatagramPacket(lMsg, lMsg.length);
+                    // datagramSocket.receive(resp);
+                    // stringData = new String(lMsg, 0, resp.getLength());
 
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -246,8 +299,8 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
     }
 
     public void calibrate(View view) {
-        calibrateCounter = 0;
-        isCalibrating = true;
+        accelerationCalibrateCounter = 0;
         initializeSensorValues();
+        isCalibrating = true;
     }
 }
