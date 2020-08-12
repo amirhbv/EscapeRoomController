@@ -101,18 +101,18 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
         }
 
         Vector3D newAcceleration = new Vector3D(values);
-        if (positionChangeCounter < 10) {
-            tempAcceleration.add(newAcceleration);
-        }
-        else {
+        tempAcceleration.add(newAcceleration);
+        positionChangeCounter++;
+        if (positionChangeCounter >= 10) {
             if (tempAcceleration.isZero()) {
                 countOfZeroAccelerations++;
-                if (countOfZeroAccelerations > 25) {
+                if (countOfZeroAccelerations > 2) {
                     velocity.setZero();
                 }
             } else {
                 countOfZeroAccelerations = 0;
             }
+
             tempAcceleration.multiply(1f / positionChangeCounter);
             float dt = (sensorEvent.timestamp - acceleratorLastTimestamp) * NS2S;
             velocity.add(acceleration.getSum(tempAcceleration).getMultipliedBy(dt / 2));
@@ -152,8 +152,7 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
                 handler.post(new Runnable() {
                     @Override
                     public void run() {
-                        if (rand.nextInt(1000) < 20
-                        ) {
+                        if (rand.nextInt(1000) < 20) {
                             System.out.println(message);
                         }
                     }
