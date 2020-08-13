@@ -212,34 +212,32 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
                 return;
             }
 
-            if ((sensorEvent.timestamp - gameRotationLastTimestamp) * NS2S > 1) {
 
-                float[] rotationMatrix = new float[9];
-                SensorManager.getRotationMatrixFromVector(rotationMatrix, values);
+            float[] rotationMatrix = new float[9];
+            SensorManager.getRotationMatrixFromVector(rotationMatrix, values);
 
-                float[] angleChange = new float[3];
-                // ANGLE CHANGE : (z, x, y)
-                SensorManager.getAngleChange(angleChange, rotationMatrix, calibrationRotationMatrix);
-                for (int i = 0; i < angleChange.length; i++) {
-                    angleChange[i] *= (180 / Math.PI);
-                    if (Math.abs(angleChange[i]) < 0.2) {
-                        angleChange[i] = 0;
-                    }
+            float[] angleChange = new float[3];
+            // ANGLE CHANGE : (z, x, y)
+            SensorManager.getAngleChange(angleChange, rotationMatrix, calibrationRotationMatrix);
+            for (int i = 0; i < angleChange.length; i++) {
+                angleChange[i] *= (180 / Math.PI);
+                if (Math.abs(angleChange[i]) < 0.2) {
+                    angleChange[i] = 0;
                 }
-                currentRotationAngle = new Vector3D(angleChange[1], angleChange[2], angleChange[0]);
-
-                SensorManager.getAngleChange(angleChange, rotationMatrix, lastRotationMatrix);
-                for (int i = 0; i < angleChange.length; i++) {
-                    angleChange[i] *= (180 / Math.PI);
-                    if (Math.abs(angleChange[i]) < 0.2) {
-                        angleChange[i] = 0;
-                    }
-                }
-                lastRotationAngle = new Vector3D(angleChange[1], angleChange[2], angleChange[0]);
-
-                lastRotationMatrix = rotationMatrix;
-                gameRotationLastTimestamp = sensorEvent.timestamp;
             }
+            currentRotationAngle = new Vector3D(angleChange[1], angleChange[2], angleChange[0]);
+
+            SensorManager.getAngleChange(angleChange, rotationMatrix, lastRotationMatrix);
+            for (int i = 0; i < angleChange.length; i++) {
+                angleChange[i] *= (180 / Math.PI);
+                if (Math.abs(angleChange[i]) < 0.2) {
+                    angleChange[i] = 0;
+                }
+            }
+            lastRotationAngle = new Vector3D(angleChange[1], angleChange[2], angleChange[0]);
+
+            lastRotationMatrix = rotationMatrix;
+            gameRotationLastTimestamp = sensorEvent.timestamp;
         }
     }
 
