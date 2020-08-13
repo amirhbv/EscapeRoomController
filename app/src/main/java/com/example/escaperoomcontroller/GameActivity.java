@@ -219,7 +219,7 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
                 SensorManager.getAngleChange(angleChange, rotationMatrix, calibrationRotationMatrix);
                 for (int i = 0; i < angleChange.length; i++) {
                     angleChange[i] *= (180 / Math.PI);
-                    if (angleChange[i] < 0.2) {
+                    if (Math.abs(angleChange[i]) < 0.2) {
                         angleChange[i] = 0;
                     }
                 }
@@ -228,7 +228,7 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
                 SensorManager.getAngleChange(angleChange, rotationMatrix, lastRotationMatrix);
                 for (int i = 0; i < angleChange.length; i++) {
                     angleChange[i] *= (180 / Math.PI);
-                    if (angleChange[i] < 0.2) {
+                    if (Math.abs(angleChange[i]) < 0.2) {
                         angleChange[i] = 0;
                     }
                 }
