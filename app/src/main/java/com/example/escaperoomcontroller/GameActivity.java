@@ -8,6 +8,7 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.Handler;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
@@ -49,8 +50,10 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
     private float[] lastRotationMatrix;
     private Vector3D currentRotationAngle;
     private Vector3D lastRotationAngle;
+
     private boolean shouldAccelerometerUpdateBeSent = false;
     private boolean shouldRotationUpdateBeSent = false;
+    private boolean isBeingTouched = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -127,7 +130,7 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
         }
 
         if (isStarted) {
-            final String msg = String.format("%s%s%s", acceleration, currentRotationAngle, lastRotationAngle);
+            final String msg = String.format("%s%s%s%s", acceleration, currentRotationAngle, lastRotationAngle, isBeingTouched ? '1' : '0');
             textView.setText(msg);
             sendMessage(msg);
         }
@@ -316,7 +319,29 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
 
     public void calibrate(View view) {
         accelerationCalibrateCounter = 0;
+        accelerationCalibrateStartTimestamp = 0;
+        acceleratorLastTimestamp = 0;
+
+        gameRotationCalibrateCounter = 0;
+        gameRotationCalibrateStartTimestamp = 0;
+        gameRotationLastTimestamp = 0;
+
+        isBeingTouched = false;
+
         initializeSensorValues();
         isCalibrating = true;
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        switch(event.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                isBeingTouched = true;
+                break;
+            case MotionEvent.ACTION_UP:
+                isBeingTouched = false;
+                break;
+        }
+        return super.onTouchEvent(event);
     }
 }
