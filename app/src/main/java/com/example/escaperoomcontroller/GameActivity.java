@@ -168,6 +168,7 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
 
     private void handleGameRotationSensorEvent(SensorEvent sensorEvent) {
         float[] values = sensorEvent.values;
+
         if (isCalibrating) {
             if (gameRotationCalibrateStartTimestamp == 0) {
                 gameRotationCalibrateStartTimestamp = sensorEvent.timestamp;
@@ -206,12 +207,18 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
                 SensorManager.getAngleChange(angleChange, rotationMatrix, calibrationRotationMatrix);
                 for (int i = 0; i < angleChange.length; i++) {
                     angleChange[i] *= (180 / Math.PI);
+                    if (angleChange[i] < 0.2) {
+                        angleChange[i] = 0;
+                    }
                 }
                 currentRotationAngle = new Vector3D(angleChange[1], angleChange[2], angleChange[0]);
 
                 SensorManager.getAngleChange(angleChange, rotationMatrix, lastRotationMatrix);
                 for (int i = 0; i < angleChange.length; i++) {
                     angleChange[i] *= (180 / Math.PI);
+                    if (angleChange[i] < 0.2) {
+                        angleChange[i] = 0;
+                    }
                 }
                 lastRotationAngle = new Vector3D(angleChange[1], angleChange[2], angleChange[0]);
 
