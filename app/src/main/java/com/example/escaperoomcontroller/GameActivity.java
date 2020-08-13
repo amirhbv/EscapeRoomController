@@ -77,9 +77,7 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
 
         lastRotationMatrix = new float[9];
         calibrationRotationMatrix = new float[9];
-        for (int i = 0; i < calibrationRotationMatrix.length; i++) {
-            calibrationRotationMatrix[i] = 0;
-        }
+        Arrays.fill(calibrationRotationMatrix, 0);
         currentRotationAngle = new Vector3D();
         lastRotationAngle = new Vector3D();
     }
@@ -103,7 +101,6 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
 
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
-        String sensorName = "";
         if (sensorEvent.accuracy == SensorManager.SENSOR_STATUS_UNRELIABLE) {
             return;
         }
@@ -208,13 +205,13 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
                 // ANGLE CHANGE : (z, x, y)
                 SensorManager.getAngleChange(angleChange, rotationMatrix, calibrationRotationMatrix);
                 for (int i = 0; i < angleChange.length; i++) {
-                    angleChange[i] *= 57;
+                    angleChange[i] *= (180 / Math.PI);
                 }
                 currentRotationAngle = new Vector3D(angleChange);
 
                 SensorManager.getAngleChange(angleChange, rotationMatrix, lastRotationMatrix);
                 for (int i = 0; i < angleChange.length; i++) {
-                    angleChange[i] *= 57;
+                    angleChange[i] *= (180 / Math.PI);
                 }
                 lastRotationAngle = new Vector3D(angleChange);
 
