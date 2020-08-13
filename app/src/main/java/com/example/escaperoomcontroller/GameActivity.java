@@ -207,13 +207,13 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
                 for (int i = 0; i < angleChange.length; i++) {
                     angleChange[i] *= (180 / Math.PI);
                 }
-                currentRotationAngle = new Vector3D(angleChange);
+                currentRotationAngle = new Vector3D(angleChange[1], angleChange[2], angleChange[0]);
 
                 SensorManager.getAngleChange(angleChange, rotationMatrix, lastRotationMatrix);
                 for (int i = 0; i < angleChange.length; i++) {
                     angleChange[i] *= (180 / Math.PI);
                 }
-                lastRotationAngle = new Vector3D(angleChange);
+                lastRotationAngle = new Vector3D(angleChange[1], angleChange[2], angleChange[0]);
 
                 lastRotationMatrix = rotationMatrix;
                 gameRotationLastTimestamp = sensorEvent.timestamp;
