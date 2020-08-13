@@ -115,7 +115,7 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
         }
 
         if (isStarted) {
-            final String msg = String.format("%s\n%s\n%s", acceleration, currentRotationAngle, lastRotationAngle);
+            final String msg = String.format("%s>%s>%s>", acceleration, currentRotationAngle, lastRotationAngle);
             textView.setText(msg);
             sendMessage(msg);
         }

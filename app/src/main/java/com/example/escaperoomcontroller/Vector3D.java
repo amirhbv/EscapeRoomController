@@ -123,6 +123,6 @@ public class Vector3D {
 
     @Override
     public String toString() {
-        return String.format("(%s, %s, %s)", this.x, this.y, this.z);
+        return String.format("%s>%s>%s>", this.x, this.y, this.z);
     }
 }
