@@ -49,6 +49,8 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
     private float[] lastRotationMatrix;
     private Vector3D currentRotationAngle;
     private Vector3D lastRotationAngle;
+    private boolean shouldAccelerometerUpdateBeSent = false;
+    private boolean shouldRotationUpdateBeSent = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -108,9 +110,19 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
         switch (sensorEvent.sensor.getType()) {
             case Sensor.TYPE_LINEAR_ACCELERATION:
                 handleAccelerationSensorEvent(sensorEvent);
+                if (!shouldAccelerometerUpdateBeSent) {
+                    shouldAccelerometerUpdateBeSent = true;
+                    return;
+                }
+                shouldAccelerometerUpdateBeSent = false;
                 break;
             case Sensor.TYPE_GAME_ROTATION_VECTOR:
                 handleGameRotationSensorEvent(sensorEvent);
+                if (!shouldRotationUpdateBeSent) {
+                    shouldRotationUpdateBeSent = true;
+                    return;
+                }
+                shouldRotationUpdateBeSent = false;
                 break;
         }
 
